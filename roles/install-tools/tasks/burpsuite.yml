@@ -1,0 +1,48 @@
+---
+- name: "Check if BurpSuite is already installed"
+  ansible.builtin.stat:
+    path: /opt/BurpSuiteCommunity/BurpSuiteCommunity
+  register: burpsuite_installed
+
+- name: "Download BurpSuite Community Edition installer"
+  ansible.builtin.get_url:
+    url: "https://portswigger-cdn.net/burp/releases/download?product=community&version=latest&type=Linux"
+    dest: /tmp/burpsuite_community_linux.sh
+    mode: '0755'
+  when: not burpsuite_installed.stat.exists
+
+- name: "Install BurpSuite Community Edition (silent mode)"
+  become: true
+  become_method: sudo
+  ansible.builtin.command:
+    cmd: /tmp/burpsuite_community_linux.sh -q
+  args:
+    creates: /opt/BurpSuiteCommunity/BurpSuiteCommunity
+  when: not burpsuite_installed.stat.exists
+
+- name: "Ensure .local/share/applications directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.local/share/applications"
+    state: directory
+    mode: '0755'
+  become: false
+
+- name: "Create desktop entry for BurpSuite"
+  ansible.builtin.copy:
+    content: |
+      [Desktop Entry]
+      Name=Burp Suite Community Edition
+      Exec=/opt/BurpSuiteCommunity/BurpSuiteCommunity
+      Terminal=false
+      Type=Application
+      Categories=Development;Security;
+    dest: "{{ ansible_env.HOME }}/.local/share/applications/burpsuite.desktop"
+    mode: '0644'
+  become: false
+
+- name: "Clean up installer"
+  ansible.builtin.file:
+    path: /tmp/burpsuite_community_linux.sh
+    state: absent
+  become: false
+

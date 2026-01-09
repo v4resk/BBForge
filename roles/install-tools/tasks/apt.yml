@@ -3,35 +3,20 @@
   become: true
   become_method: sudo
   ansible.builtin.apt:
-    upgrade: yes
+    upgrade: no
     update_cache: yes
     cache_valid_time: 86400 #One day
   
-# Removing for pipx install
-- name: "Remove Packages"
-  ansible.builtin.package:
-    name:
-      - crackmapexec
-      - certipy-ad
-      - code-oss
-    state: absent
-  become: true
-  become_method: sudo
-
 - name: "Installing Packages"
   ansible.builtin.package:
     name:
       - jq
       - pipx
-      - ntpdate
-      - exiftool
-      - rsyslog
       - golang
       - zsh
-      - ufw
       - docker.io
       - docker-compose
-      - burpsuite
+      - openjdk-17-jre
     state: latest
   become: true
   become_method: sudo
