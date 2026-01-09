@@ -1,0 +1,57 @@
+---
+- name: "Configure Azerty French keyboard layout (system-wide)"
+  become: true
+  become_method: sudo
+  ansible.builtin.command:
+    cmd: "localectl set-x11-keymap fr pc105 latin9"
+  register: keyboard_config
+  changed_when: true
+  failed_when: false
+
+- name: "Check if X11 is available"
+  ansible.builtin.stat:
+    path: /tmp/.X11-unix
+  register: x11_available
+
+- name: "Set keyboard layout for current user (X11)"
+  ansible.builtin.shell: |
+    export DISPLAY=:0
+    setxkbmap -model pc105 -layout fr -variant latin9 2>/dev/null || true
+  register: x11_keyboard
+  failed_when: false
+  changed_when: true
+  when: x11_available.stat.exists
+
+- name: "Create .config directory if it doesn't exist"
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user_id }}/.config"
+    state: directory
+    mode: '0755'
+
+- name: "Create keyboard configuration for user session"
+  ansible.builtin.copy:
+    content: |
+      #!/bin/bash
+      # Azerty French keyboard configuration
+      if [ -n "$DISPLAY" ]; then
+        setxkbmap -model pc105 -layout fr -variant latin9 2>/dev/null || true
+      fi
+    dest: "/home/{{ ansible_user_id }}/.config/keyboard-setup.sh"
+    mode: '0755'
+
+- name: "Add keyboard setup to .bashrc"
+  ansible.builtin.lineinfile:
+    path: "/home/{{ ansible_user_id }}/.bashrc"
+    line: "[ -f ~/.config/keyboard-setup.sh ] && source ~/.config/keyboard-setup.sh"
+    create: true
+    insertafter: EOF
+    regexp: '^\[ -f ~/\.config/keyboard-setup\.sh \]'
+
+- name: "Add keyboard setup to .zshrc"
+  ansible.builtin.lineinfile:
+    path: "/home/{{ ansible_user_id }}/.zshrc"
+    line: "[ -f ~/.config/keyboard-setup.sh ] && source ~/.config/keyboard-setup.sh"
+    create: true
+    insertafter: EOF
+    regexp: '^\[ -f ~/\.config/keyboard-setup\.sh \]'
+

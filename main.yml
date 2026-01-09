@@ -9,19 +9,5 @@
     - role: "roles/config-browser"
     - role: "roles/config-logging"
     - role: "roles/config-obsidian"
-    #Visual-Studio-code Setup   
-    - role: gantsign.visual-studio-code
-      users:
-        - username: "{{ ansible_user_id }}" 
-          visual_studio_code_extensions:
-            - streetsidesoftware.code-spell-checker
-            - ms-python.python
-            - DEVSENSE.phptools-vscode
-            - GitHub.copilot-nightly
-            - snyk-security.snyk-vulnerability-scanner
-            - charliermarsh.ruff
-    #Keyboard Setup
-    - role: gantsign.keyboard
-      keyboard_model: pc105
-      keyboard_layout: fr
-      keyboard_variant: latin9
+    - role: "roles/install-vscode"
+    - role: "roles/config-keyboard"

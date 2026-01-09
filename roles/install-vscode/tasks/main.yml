@@ -1,0 +1,35 @@
+---
+- name: "Check if VS Code .deb file exists"
+  ansible.builtin.stat:
+    path: "{{ role_path }}/files/code.deb"
+  register: vscode_deb
+
+- name: "Skip VS Code installation if .deb file not found"
+  ansible.builtin.debug:
+    msg: "VS Code .deb file not found. Skipping VS Code installation. To install VS Code, download the .deb from https://code.visualstudio.com/download and place it in roles/install-vscode/files/code.deb"
+  when: not vscode_deb.stat.exists
+
+- name: "Install VS Code from .deb file"
+  become: true
+  become_method: sudo
+  ansible.builtin.apt:
+    deb: "{{ role_path }}/files/code.deb"
+    state: present
+    update_cache: yes
+  when: vscode_deb.stat.exists
+
+- name: "Install VS Code extensions"
+  ansible.builtin.command:
+    cmd: "code --install-extension {{ item }}"
+  loop:
+    - streetsidesoftware.code-spell-checker
+    - ms-python.python
+    - DEVSENSE.phptools-vscode
+    - GitHub.copilot-nightly
+    - snyk-security.snyk-vulnerability-scanner
+    - charliermarsh.ruff
+  register: vscode_extensions
+  failed_when: false
+  changed_when: "'already installed' not in vscode_extensions.stdout"
+  when: vscode_deb.stat.exists
+

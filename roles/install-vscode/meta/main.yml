@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: BBForge
+  description: Install Visual Studio Code from .deb file
+  license: MIT
+  min_ansible_version: '2.9'
+
+dependencies: []
+

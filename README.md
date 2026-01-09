@@ -18,12 +18,13 @@ sudo apt update
 sudo apt install ansible-core
 ```  
 
-Clone repo and install dependencies
+Clone repo
 ```bash
 git clone https://github.com/v4resk/BBForge
 cd BBForge
-ansible-galaxy install -r requirements.yml
 ```
+
+**Optional:** If you want to install Visual Studio Code, download the .deb file from [VS Code downloads](https://code.visualstudio.com/download) and place it in `roles/install-vscode/files/code.deb`. If the file is not present, the playbook will skip VS Code installation.
 
 To run it:
 ```bash
