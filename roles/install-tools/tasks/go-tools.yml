@@ -1,30 +1,134 @@
 ---
-- name: "Install Go tools"
-  shell: "go install {{ item }}"
+- name: "Ensure Go environment is set up"
+  ansible.builtin.shell: |
+    export PATH=$PATH:$(go env GOPATH)/bin
+    echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.bashrc
+  args:
+    creates: /tmp/go_path_setup_done
+  changed_when: false
+
+- name: "Install Subdomain tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
   loop:
-    - github.com/ropnop/kerbrute@master
-    - github.com/lc/gau/v2/cmd/gau@latest
-    - github.com/hakluke/hakrawler@latest
-    - github.com/tomnomnom/waybackurls@latest
-    - github.com/projectdiscovery/katana/cmd/katana@latest
-    - github.com/tomnomnom/qsreplace@latest
-    - github.com/projectdiscovery/httpx/cmd/httpx@latest
-    - github.com/KathanP19/Gxss@latest
-    - github.com/hahwul/dalfox/v2@latest
-    - github.com/tomnomnom/anew@latest
-    - github.com/tomnomnom/assetfinder@latest
-    - github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
-    - github.com/owasp-amass/amass/v4/...@master
+    - github.com/projectdiscovery/subfinder/v2/cmd/subfinder
+    - github.com/owasp-amass/amass/v4/...
+    - github.com/tomnomnom/assetfinder
+    - github.com/Findomain/findomain
+    - github.com/projectdiscovery/chaos-client/cmd/chaos
 
-- name: "install gospider"
-  shell: GO111MODULE=on go install github.com/jaeles-project/gospider@latest
+- name: "Install HTTP Probing tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/projectdiscovery/httpx/cmd/httpx
+    - github.com/tomnomnom/httprobe
 
+- name: "Install Crawling tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/projectdiscovery/katana/cmd/katana
+    - github.com/jaeles-project/gospider
+    - github.com/hakluke/hakrawler
+    - github.com/lc/cariddi
 
-- name: "install Ivy"
-  ansible.builtin.shell:
-    cmd: |
-     git clone https://github.com/optiv/Ivy /home/{{ ansible_user_id }}/Documents/RedTeam/Shells/VBA/Ivy
-     cd /home/{{ ansible_user_id }}/Documents/RedTeam/Shells/VBA/Ivy
-     go get github.com/fatih/color
-     go get github.com/KyleBanks/XOREncryption/Go
-     go build Ivy.go
+- name: "Install URL discovery tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/lc/gau/v2/cmd/gau
+    - github.com/tomnomnom/waybackurls
+    - github.com/xnl-h4ck3r/waymore
+
+- name: "Install Scanning tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/projectdiscovery/nuclei/v3/cmd/nuclei
+    - github.com/jaeles-project/jaeles
+    - github.com/projectdiscovery/naabu/v2/cmd/naabu
+
+- name: "Install XSS tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/hahwul/dalfox/v2
+    - github.com/s0md3v/XSStrike
+    - github.com/Emoe/kxss
+    - github.com/ferreiraklet/airixss
+
+- name: "Install Utility tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/tomnomnom/anew
+    - github.com/tomnomnom/qsreplace
+    - github.com/tomnomnom/unfurl
+    - github.com/tomnomnom/gf
+
+- name: "Install Uro"
+  ansible.builtin.shell: "pipx install uro"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+
+- name: "Install Fuzzing tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/ffuf/ffuf/v2
+    - github.com/epi052/feroxbuster
+
+- name: "Install JS Analysis tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/lc/subjs
+    - github.com/GerbenJavado/LinkFinder
+    - github.com/m4ll0k/SecretFinder
+    - github.com/ThreatUnkown/jsubfinder
+
+- name: "Install DNS tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/projectdiscovery/dnsx/cmd/dnsx
+    - github.com/projectdiscovery/shuffledns/cmd/shuffledns
+    - github.com/d3mondev/puredns/v2
+    - github.com/blechschmidt/massdns
+    - github.com/dnsgen/dnsgen
+
+- name: "Install Reverse DNS tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/hakluke/hakrevdns
+    - github.com/robertdavidgraham/prips
+
+- name: "Install Screenshot tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/sensepost/gowitness
+    - github.com/FortyNorthSecurity/EyeWitness
+
+- name: "Install Git Recon tools"
+  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+  loop:
+    - github.com/trufflesecurity/trufflehog/v3
+    - github.com/michenriksen/gitrob
+    - github.com/gwen001/github-subdomains

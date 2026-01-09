@@ -1,9 +1,40 @@
 ---
 # tasks file for config-obsidian
+- name: "Creating Obsidian directory"
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user_id }}/.local/share/obsidian"
+    state: directory
+    mode: '0755'
+
+- name: "Get latest Obsidian release info"
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest"
+    return_content: yes
+  register: obsidian_release
+
+- name: "Find Obsidian AppImage URL for current architecture"
+  ansible.builtin.set_fact:
+    obsidian_appimage_url: "{{ item.browser_download_url }}"
+  loop: "{{ obsidian_release.json.assets }}"
+  when: 
+    - item.name is match('.*AppImage$')
+    - (ansible_architecture == 'x86_64' and ('x86_64' in item.name or 'amd64' in item.name)) or
+      (ansible_architecture == 'aarch64' and 'arm64' in item.name) or
+      (ansible_architecture == 'armv7l' and 'armv7' in item.name)
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "Download Obsidian AppImage"
+  ansible.builtin.get_url:
+    url: "{{ obsidian_appimage_url }}"
+    dest: "/home/{{ ansible_user_id }}/.local/share/obsidian/Obsidian.AppImage"
+    mode: '0755'
+  when: obsidian_appimage_url is defined
+
 - name: "Give execution permissions to obsidian"
   ansible.builtin.file:
-    path: /home/{{ ansible_user_id }}/Documents/RedTeam/Reports/Obsidian/Obsidian.AppImage
-    mode: 0744
+    path: /home/{{ ansible_user_id }}/.local/share/obsidian/Obsidian.AppImage
+    mode: 0755
 
 - name: "Creating config folder"
   ansible.builtin.file:
@@ -17,12 +48,12 @@
 
 - name: "Creating the vault folder"
   ansible.builtin.file:
-    path: "/home/{{ ansible_user_id }}/Documents/RedTeam/Reports/Obsidian/MyVault/"
+    path: "/home/{{ ansible_user_id }}/.local/share/obsidian/MyVault/"
     state: directory
 
 - name: "Creating vault sub-folders"
   ansible.builtin.file:
-    path: "/home/{{ ansible_user_id }}/Documents/RedTeam/Reports/Obsidian/MyVault/{{ item }}"
+    path: "/home/{{ ansible_user_id }}/.local/share/obsidian/MyVault/{{ item }}"
     state: directory
   loop:
     - Templates
@@ -31,7 +62,7 @@
 - name: "Configuring the vault"
   ansible.builtin.copy:
     src: "files/{{ item.src }}"
-    dest: "/home/{{ ansible_user_id }}/Documents/RedTeam/Reports/Obsidian/MyVault/{{ item.dest }}"
+    dest: "/home/{{ ansible_user_id }}/.local/share/obsidian/MyVault/{{ item.dest }}"
   loop:
     - { src: ".obsidian", dest: "./" }
     - { src: "Endpoint Pentest  - Template.md", dest: "Templates/Endpoint Pentest  - Template.md" }

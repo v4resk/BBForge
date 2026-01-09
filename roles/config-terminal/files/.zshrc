@@ -244,8 +244,7 @@ fi
 alias ll='ls -larth'
 alias la='ls -A'
 alias l='ls -CF'
-alias ida="/home/$USER/BlueTeam/idafree-8.1/ida64"
-alias obsidian="/home/$USER/Documents/RedTeam/Reports/Obsidian/Obsidian.AppImage"
+alias obsidian="~/.local/share/obsidian/Obsidian.AppImage"
 
 # enable auto-suggestions based on the history
 if [ -f /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]; then
@@ -261,7 +260,4 @@ fi
 
 # Created by `pipx` on 2022-12-07 16:57:07
 export PATH="$PATH:/home/$USER/.local/bin:/home/$USER/go/bin"
-
-#Arsenal By OCD
-alias arsenal="/home/$USER/Documents/RedTeam/Tools/arsenal/run -t"
 

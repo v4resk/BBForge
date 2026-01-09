@@ -1,22 +1,3 @@
 ---
-- name: "Installing tools from Gems"
-  gem:
-    name: "{{ item }}"
-    state: latest
-  loop:
-    - logger
-    - stringio
-    - winrm
-    - builder
-    - erubi
-    - gssapi
-    - gyoku
-    - httpclient
-    - logging
-    - little-plugger
-    - nori
-    - rubyntlm
-    - winrm-fs
-    - evil-winrm
-  become: true
-  become_method: sudo
+# Ruby gem tools installation removed - not needed for bug bounty
+# This file is kept for structure but contains no tasks

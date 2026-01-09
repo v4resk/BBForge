@@ -1,8 +1,23 @@
 ---
+- name: "Check if zsh is installed"
+  ansible.builtin.command: which zsh
+  register: zsh_check
+  failed_when: false
+  changed_when: false
+
+- name: "Install zsh if not present"
+  become: true
+  become_method: sudo
+  ansible.builtin.package:
+    name: zsh
+    state: present
+  when: zsh_check.rc != 0
+
 - name: "Copy ZshRC"
   copy:
     src: "{{ role_path }}/files/.zshrc"
-    dest: "{{ ansible_env.HOME }}"
+    dest: "{{ ansible_env.HOME }}/.zshrc"
+
 - name: "Removing Kali developers msg"
   ansible.builtin.shell:
     cmd: touch /home/{{ ansible_user_id }}/.hushlogin

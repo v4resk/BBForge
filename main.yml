@@ -1,5 +1,5 @@
 ---
-- name: "Customizing Parrot"
+- name: "BBForge - Bug Bounty Environment Setup"
   hosts: localhost
   connection: local
   roles:

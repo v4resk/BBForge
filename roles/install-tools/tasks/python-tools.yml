@@ -1,17 +1,50 @@
 ---
-- name: "Install pipx tools"
-  community.general.pipx:
-    name: "{{ item.name }}"
-    source: "{{ item.url }}"
-    state: latest
+- name: "Install SQLi tools"
+  ansible.builtin.shell: "{{ item.command }}"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
   loop:
-    - { name: 'impacket', url: 'git+https://github.com/fortra/impacket.git' }
-    - { name: 'netexec', url: 'git+https://github.com/Pennyw0rth/NetExec' }
-    - { name: 'certipy-ad', url: 'git+https://github.com/ly4k/Certipy.git' }
-    - { name: 'pwncat-cs', url: 'git+https://github.com/calebstewart/pwncat.git' }
-    - { name: 'pwncat', url: 'pwncat' }
-    - { name: 'bloodhound', url: 'git+https://github.com/fox-it/BloodHound.py.git' }
-    - { name: 'pypykatz', url: 'git+https://github.com/skelsec/pypykatz.git' }
-    - {name: 'ldif2bloodhound', url: 'git+https://github.com/SySS-Research/ldif2bloodhound.git'}
-    - {name: 'coercer', url: 'coercer'}
-    - {name: 'uro', url: 'uro'}
+    - { command: "pip install sqlmap" }
+    - { command: "pip install ghauri" }
+
+- name: "Install Cert Monitoring tools"
+  ansible.builtin.shell: "{{ item.command }}"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  loop:
+    - { command: "pip install certstream" }
+    - { command: "pip install certstream-go" }
+
+- name: "Install API Discovery tools"
+  ansible.builtin.shell: "{{ item.command }}"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  loop:
+    - { command: "pip install arjun" }
+    - { command: "pip install x8" }
+    - { command: "pip install paramspider" }
+
+- name: "Install Cloud tools"
+  ansible.builtin.shell: "{{ item.command }}"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  loop:
+    - { command: "pip install awscli" }
+    - { command: "pip install cloudenum" }
+    - { command: "pip install s3scanner" }
+
+- name: "Install OSINT tools"
+  ansible.builtin.shell: "{{ item.command }}"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  loop:
+    - { command: "pip install shodan" }
+    - { command: "pip install censys" }
+    - { command: "pip install metabigor" }
+
+- name: "Install Scope Management tools"
+  ansible.builtin.shell: "{{ item.command }}"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  loop:
+    - { command: "pip install bbrf" }

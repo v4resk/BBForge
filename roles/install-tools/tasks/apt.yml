@@ -27,9 +27,11 @@
       - exiftool
       - rsyslog
       - golang
+      - zsh
       - ufw
       - docker.io
       - docker-compose
+      - burpsuite
     state: latest
   become: true
   become_method: sudo
