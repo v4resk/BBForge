@@ -9,16 +9,23 @@
     url: "https://portswigger-cdn.net/burp/releases/download?product=community&version=latest&type=Linux"
     dest: /tmp/burpsuite_community_linux.sh
     mode: '0755'
+    timeout: 300
+    follow_redirects: all
   when: not burpsuite_installed.stat.exists
 
 - name: "Install BurpSuite Community Edition (silent mode)"
   become: true
   become_method: sudo
-  ansible.builtin.command:
-    cmd: /tmp/burpsuite_community_linux.sh -q
+  ansible.builtin.shell: |
+    cd /tmp
+    bash burpsuite_community_linux.sh -q <<EOF
+    /opt/BurpSuiteCommunity
+    y
+    EOF
   args:
     creates: /opt/BurpSuiteCommunity/BurpSuiteCommunity
   when: not burpsuite_installed.stat.exists
+  failed_when: false
 
 - name: "Ensure .local/share/applications directory exists"
   ansible.builtin.file:
