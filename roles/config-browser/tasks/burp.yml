@@ -1,30 +1,32 @@
 - name: "Check if BurpSuiteCA.der exists"
-  stat:
+  ansible.builtin.stat:
     path: /usr/local/share/ca-certificates/BurpSuiteCA.der
   register: burp_cert
   
 - name: "Copying Burp Script"
-  copy:
+  ansible.builtin.copy:
     src: files/getburpcert.sh
     dest: /tmp/getburpcert.sh
-    mode: 0744
-  when: burp_cert.stat.exists == False
+    mode: '0744'
+  when: not burp_cert.stat.exists
+  become: false
 
 - name: "Executing bash script to Download CA Certificate"
-  shell:
-    /tmp/getburpcert.sh
-  when: burp_cert.stat.exists == False
+  ansible.builtin.shell:
+    cmd: /tmp/getburpcert.sh
+  when: not burp_cert.stat.exists
+  become: false
 
 - name: "Copying CA Certificate to /usr/local/share/ca-certificates"
-  copy:
+  ansible.builtin.copy:
     src: /tmp/cacert.der
     dest: /usr/local/share/ca-certificates/BurpSuiteCA.der
     owner: root
     group: root
-    mode: 0644
+    mode: '0644'
   become: true
   become_method: sudo
-  when: burp_cert.stat.exists == False
+  when: not burp_cert.stat.exists
 
 - name: Create directory for Burp Suite extras
   ansible.builtin.file:
@@ -42,10 +44,18 @@
     mode: '0644'
   become: true
   become_method: sudo
-  loop: "{{ lookup('dict', burpsuite_extras_jars) }}"
+  loop: "{{ burpsuite_extras_jars | dict2items }}"
   
+- name: "Ensure .BurpSuite directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.BurpSuite"
+    state: directory
+    mode: '0755'
+  become: false
+
 - name: Copy BurpSuite Community Config
-  template:
+  ansible.builtin.template:
     src: "templates/UserConfigCommunity.json.j2"
-    dest: "/home/{{ ansible_user_id }}/.BurpSuite/UserConfigCommunity.json"
+    dest: "{{ ansible_env.HOME }}/.BurpSuite/UserConfigCommunity.json"
+  become: false
 

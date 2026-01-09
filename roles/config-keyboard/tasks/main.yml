@@ -24,9 +24,10 @@
 
 - name: "Create .config directory if it doesn't exist"
   ansible.builtin.file:
-    path: "/home/{{ ansible_user_id }}/.config"
+    path: "{{ ansible_env.HOME }}/.config"
     state: directory
     mode: '0755'
+  become: false
 
 - name: "Create keyboard configuration for user session"
   ansible.builtin.copy:
@@ -36,22 +37,25 @@
       if [ -n "$DISPLAY" ]; then
         setxkbmap -model pc105 -layout fr -variant latin9 2>/dev/null || true
       fi
-    dest: "/home/{{ ansible_user_id }}/.config/keyboard-setup.sh"
+    dest: "{{ ansible_env.HOME }}/.config/keyboard-setup.sh"
     mode: '0755'
+  become: false
 
 - name: "Add keyboard setup to .bashrc"
   ansible.builtin.lineinfile:
-    path: "/home/{{ ansible_user_id }}/.bashrc"
+    path: "{{ ansible_env.HOME }}/.bashrc"
     line: "[ -f ~/.config/keyboard-setup.sh ] && source ~/.config/keyboard-setup.sh"
     create: true
     insertafter: EOF
     regexp: '^\[ -f ~/\.config/keyboard-setup\.sh \]'
+  become: false
 
 - name: "Add keyboard setup to .zshrc"
   ansible.builtin.lineinfile:
-    path: "/home/{{ ansible_user_id }}/.zshrc"
+    path: "{{ ansible_env.HOME }}/.zshrc"
     line: "[ -f ~/.config/keyboard-setup.sh ] && source ~/.config/keyboard-setup.sh"
     create: true
     insertafter: EOF
     regexp: '^\[ -f ~/\.config/keyboard-setup\.sh \]'
+  become: false
 

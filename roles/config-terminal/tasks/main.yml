@@ -14,10 +14,20 @@
   when: zsh_check.rc != 0
 
 - name: "Copy ZshRC"
-  copy:
+  ansible.builtin.copy:
     src: "{{ role_path }}/files/.zshrc"
     dest: "{{ ansible_env.HOME }}/.zshrc"
+  become: false
 
 - name: "Removing Kali developers msg"
   ansible.builtin.shell:
-    cmd: touch /home/{{ ansible_user_id }}/.hushlogin
+    cmd: touch {{ ansible_env.HOME }}/.hushlogin
+  become: false
+
+- name: "Set zsh as default shell"
+  become: true
+  become_method: sudo
+  ansible.builtin.user:
+    name: "{{ ansible_user_id }}"
+    shell: /usr/bin/zsh
+  when: zsh_check.rc == 0

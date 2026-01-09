@@ -1,50 +1,93 @@
 ---
+- name: "Check if pipx is installed"
+  ansible.builtin.command: which pipx
+  register: pipx_check
+  failed_when: false
+  changed_when: false
+
+- name: "Fail if pipx is not installed"
+  ansible.builtin.fail:
+    msg: "pipx is not installed. Please ensure pipx package is installed first."
+  when: pipx_check.rc != 0
+
+- name: "Ensure pipx bin directory is in PATH"
+  ansible.builtin.shell: "pipx ensurepath"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  become: false
+  when: pipx_check.rc == 0
+  changed_when: false
+
 - name: "Install SQLi tools"
-  ansible.builtin.shell: "{{ item.command }}"
+  ansible.builtin.shell: "pipx install {{ item }}"
   environment:
     PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
   loop:
-    - { command: "pip install sqlmap" }
-    - { command: "pip install ghauri" }
+    - sqlmap
+    - ghauri
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true
 
 - name: "Install Cert Monitoring tools"
-  ansible.builtin.shell: "{{ item.command }}"
+  ansible.builtin.shell: "pipx install {{ item }}"
   environment:
     PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
   loop:
-    - { command: "pip install certstream" }
-    - { command: "pip install certstream-go" }
+    - certstream
+    - certstream-go
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true
 
 - name: "Install API Discovery tools"
-  ansible.builtin.shell: "{{ item.command }}"
+  ansible.builtin.shell: "pipx install {{ item }}"
   environment:
     PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
   loop:
-    - { command: "pip install arjun" }
-    - { command: "pip install x8" }
-    - { command: "pip install paramspider" }
+    - arjun
+    - x8
+    - paramspider
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true
 
 - name: "Install Cloud tools"
-  ansible.builtin.shell: "{{ item.command }}"
+  ansible.builtin.shell: "pipx install {{ item }}"
   environment:
     PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
   loop:
-    - { command: "pip install awscli" }
-    - { command: "pip install cloudenum" }
-    - { command: "pip install s3scanner" }
+    - awscli
+    - cloudenum
+    - s3scanner
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true
 
 - name: "Install OSINT tools"
-  ansible.builtin.shell: "{{ item.command }}"
+  ansible.builtin.shell: "pipx install {{ item }}"
   environment:
     PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
   loop:
-    - { command: "pip install shodan" }
-    - { command: "pip install censys" }
-    - { command: "pip install metabigor" }
+    - shodan
+    - censys
+    - metabigor
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true
 
 - name: "Install Scope Management tools"
-  ansible.builtin.shell: "{{ item.command }}"
+  ansible.builtin.shell: "pipx install {{ item }}"
   environment:
     PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
   loop:
-    - { command: "pip install bbrf" }
+    - bbrf
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true

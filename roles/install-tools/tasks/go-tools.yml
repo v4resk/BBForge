@@ -1,134 +1,195 @@
 ---
-- name: "Ensure Go environment is set up"
-  ansible.builtin.shell: |
-    export PATH=$PATH:$(go env GOPATH)/bin
-    echo 'export PATH=$PATH:$(go env GOPATH)/bin' >> ~/.bashrc
-  args:
-    creates: /tmp/go_path_setup_done
+- name: "Check if Go is installed"
+  ansible.builtin.command: which go
+  register: go_check
+  failed_when: false
   changed_when: false
+
+- name: "Fail if Go is not installed"
+  ansible.builtin.fail:
+    msg: "Go is not installed. Please ensure golang package is installed first."
+  when: go_check.rc != 0
+
+- name: "Get Go GOPATH"
+  ansible.builtin.command: go env GOPATH
+  register: go_gopath
+  changed_when: false
+  when: go_check.rc == 0
+
+- name: "Add Go bin to PATH in .bashrc"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    line: 'export PATH="$PATH:{{ go_gopath.stdout }}/bin"'
+    regexp: '^export PATH=.*go.*bin'
+    create: true
+  become: false
+  when: go_check.rc == 0 and go_gopath.stdout is defined
+
+- name: "Add Go bin to PATH in .zshrc"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    line: 'export PATH="$PATH:{{ go_gopath.stdout }}/bin"'
+    regexp: '^export PATH=.*go.*bin'
+    create: true
+  become: false
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Subdomain tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/subfinder/v2/cmd/subfinder
     - github.com/owasp-amass/amass/v4/...
     - github.com/tomnomnom/assetfinder
     - github.com/Findomain/findomain
     - github.com/projectdiscovery/chaos-client/cmd/chaos
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install HTTP Probing tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/httpx/cmd/httpx
     - github.com/tomnomnom/httprobe
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Crawling tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/katana/cmd/katana
     - github.com/jaeles-project/gospider
     - github.com/hakluke/hakrawler
     - github.com/lc/cariddi
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install URL discovery tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/lc/gau/v2/cmd/gau
     - github.com/tomnomnom/waybackurls
     - github.com/xnl-h4ck3r/waymore
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Scanning tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/nuclei/v3/cmd/nuclei
     - github.com/jaeles-project/jaeles
     - github.com/projectdiscovery/naabu/v2/cmd/naabu
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install XSS tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/hahwul/dalfox/v2
     - github.com/s0md3v/XSStrike
     - github.com/Emoe/kxss
     - github.com/ferreiraklet/airixss
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Utility tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/tomnomnom/anew
     - github.com/tomnomnom/qsreplace
     - github.com/tomnomnom/unfurl
     - github.com/tomnomnom/gf
+  when: go_check.rc == 0 and go_gopath.stdout is defined
+
+- name: "Check if pipx is installed"
+  ansible.builtin.command: which pipx
+  register: pipx_check
+  failed_when: false
+  changed_when: false
 
 - name: "Install Uro"
   ansible.builtin.shell: "pipx install uro"
   environment:
     PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  become: false
+  when: pipx_check.rc == 0
 
 - name: "Install Fuzzing tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/ffuf/ffuf/v2
     - github.com/epi052/feroxbuster
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install JS Analysis tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/lc/subjs
     - github.com/GerbenJavado/LinkFinder
     - github.com/m4ll0k/SecretFinder
     - github.com/ThreatUnkown/jsubfinder
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install DNS tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/dnsx/cmd/dnsx
     - github.com/projectdiscovery/shuffledns/cmd/shuffledns
     - github.com/d3mondev/puredns/v2
     - github.com/blechschmidt/massdns
     - github.com/dnsgen/dnsgen
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Reverse DNS tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/hakluke/hakrevdns
     - github.com/robertdavidgraham/prips
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Screenshot tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/sensepost/gowitness
     - github.com/FortyNorthSecurity/EyeWitness
+  when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Git Recon tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
   environment:
-    PATH: "{{ ansible_env.HOME }}/go/bin:{{ ansible_env.PATH }}"
+    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/trufflesecurity/trufflehog/v3
     - github.com/michenriksen/gitrob
     - github.com/gwen001/github-subdomains
+  when: go_check.rc == 0 and go_gopath.stdout is defined

@@ -1,9 +1,14 @@
 ---
+- name: "Ensure Documents directory exists"
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/Documents"
+    state: directory
+    mode: '0755'
+  become: false
+
 - name: "Create BBForge-Scripts directory"
   ansible.builtin.file:
     path: "{{ ansible_env.HOME }}/Documents/BBForge-Scripts"
     state: directory
     mode: '0755'
-    owner: "{{ ansible_user_id }}"
-    group: "{{ ansible_user_id }}"
   become: false
