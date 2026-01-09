@@ -41,7 +41,6 @@ ansible-playbook main.yml -K
 |   🗸  | Configure Tmux & zsh (auto-install on Ubuntu)    |
 |   🗸  | Install Visual-studio-code with some extensions  |
 |   🗸  | Install some extensions in firefox     |
-|   🗸  | Configure logging with ufw, iptables, rsyslog, auditd    |
 |   🗸  | Configure an Azerty Keyboard (Fr keyboard layout)    |
 |   🗸  | Install bug bounty tools globally via go/pipx:     |
 |   |   - Subdomain tools (subfinder, amass, assetfinder, findomain, chaos)     |

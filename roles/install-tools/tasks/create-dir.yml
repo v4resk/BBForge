@@ -1,6 +1,9 @@
 ---
 - name: "Create BBForge-Scripts directory"
   ansible.builtin.file:
-    path: "/home/{{ ansible_user_id }}/Documents/BBForge-Scripts"
+    path: "{{ ansible_env.HOME }}/Documents/BBForge-Scripts"
     state: directory
     mode: '0755'
+    owner: "{{ ansible_user_id }}"
+    group: "{{ ansible_user_id }}"
+  become: false

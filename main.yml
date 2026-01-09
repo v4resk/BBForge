@@ -7,7 +7,6 @@
     - role: "roles/config-tmux"
     - role: "roles/config-terminal"
     - role: "roles/config-browser"
-    - role: "roles/config-logging"
     - role: "roles/config-obsidian"
     - role: "roles/install-vscode"
     - role: "roles/config-keyboard"
