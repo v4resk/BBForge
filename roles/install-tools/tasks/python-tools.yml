@@ -18,13 +18,23 @@
   when: pipx_check.rc == 0
   changed_when: false
 
-- name: "Install SQLi tools"
+- name: "Install Waymore (pipx from git)"
+  ansible.builtin.shell: "pipx install git+https://github.com/xnl-h4ck3r/waymore.git"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true
+
+- name: "Install SQLi/XSS tools"
   ansible.builtin.shell: "pipx install {{ item }}"
   environment:
     PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
   loop:
     - sqlmap
     - ghauri
+    - xsstrike
   become: false
   when: pipx_check.rc == 0
   failed_when: false

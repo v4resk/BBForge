@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: BBForge
+  description: Install Burp Suite Community Edition (minimal, no terms/config automation)
+  license: MIT
+  min_ansible_version: '2.9'
+
+dependencies: []
+
+

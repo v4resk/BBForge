@@ -1,0 +1,18 @@
+---
+- name: "Update Rust toolchain"
+  ansible.builtin.shell: "{{ cargo_bin_path }}/rustup update stable"
+  environment:
+    PATH: "{{ cargo_bin_path }}:{{ ansible_env.PATH }}"
+    CARGO_HOME: "{{ ansible_env.HOME }}/.cargo"
+    RUSTUP_HOME: "{{ ansible_env.HOME }}/.rustup"
+  become: false
+
+- name: "Install Fuzzing tools"
+  ansible.builtin.shell: "{{ cargo_bin_path }}/cargo install {{ item }}"
+  environment:
+    PATH: "{{ cargo_bin_path }}:{{ ansible_env.PATH }}"
+    CARGO_HOME: "{{ ansible_env.HOME }}/.cargo"
+    RUSTUP_HOME: "{{ ansible_env.HOME }}/.rustup"
+  loop:
+    - feroxbuster
+  become: false

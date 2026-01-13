@@ -11,12 +11,15 @@
   ansible.builtin.package:
     name:
       - jq
+      - curl
       - pipx
       - golang
       - zsh
       - docker.io
       - docker-compose
       - openjdk-17-jre
+      - unzip
+      - libpcap-dev
     state: latest
   become: true
   become_method: sudo

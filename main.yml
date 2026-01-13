@@ -4,6 +4,8 @@
   connection: local
   roles:
     - role: "roles/install-tools"
+    - role: "roles/install-rust"
+    - role: "roles/install-burpsuite"
     - role: "roles/config-tmux"
     - role: "roles/config-terminal"
     - role: "roles/config-browser"

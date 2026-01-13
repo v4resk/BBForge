@@ -1,0 +1,14 @@
+services:
+  ansible-test:
+    build:
+      context: ..
+      dockerfile: test/Dockerfile
+    container_name: bbforge-test
+    volumes:
+      - ..:/workspace
+    stdin_open: true
+    tty: true
+    command: /bin/bash
+    environment:
+      - ANSIBLE_HOST_KEY_CHECKING=False
+

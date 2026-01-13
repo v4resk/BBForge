@@ -1,6 +1,5 @@
 ---
 - import_tasks: create-dir.yml
 - import_tasks: apt.yml
-- import_tasks: burpsuite.yml
 - import_tasks: go-tools.yml
 - import_tasks: python-tools.yml

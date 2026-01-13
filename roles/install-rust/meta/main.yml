@@ -1,0 +1,9 @@
+---
+# meta file for install-rust
+galaxy_info:
+  author: BBForge
+  description: Install Rust and Rust-based bug bounty tools
+  license: MIT
+  min_ansible_version: 2.9
+
+dependencies: []

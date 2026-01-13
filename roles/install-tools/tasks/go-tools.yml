@@ -43,9 +43,108 @@
     - github.com/projectdiscovery/subfinder/v2/cmd/subfinder
     - github.com/owasp-amass/amass/v4/...
     - github.com/tomnomnom/assetfinder
-    - github.com/Findomain/findomain
     - github.com/projectdiscovery/chaos-client/cmd/chaos
   when: go_check.rc == 0 and go_gopath.stdout is defined
+
+- name: "Check if findomain is already installed"
+  ansible.builtin.stat:
+    path: /usr/local/bin/findomain
+  register: findomain_bin
+
+- name: "Get latest Findomain release info"
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/Findomain/Findomain/releases/latest"
+    return_content: true
+  register: findomain_release
+  when: not findomain_bin.stat.exists
+
+- name: "Select Findomain Linux asset for current architecture"
+  ansible.builtin.set_fact:
+    findomain_asset_url: "{{ item.browser_download_url }}"
+  loop: "{{ findomain_release.json.assets | default([]) }}"
+  when:
+    - not findomain_bin.stat.exists
+    - item.browser_download_url is defined
+    - item.name is defined
+    - >-
+      (ansible_architecture in ['x86_64','amd64'] and item.name in ['findomain-linux.zip','findomain-linux']) or
+      (ansible_architecture in ['aarch64','arm64'] and item.name in ['findomain-aarch64.zip','findomain-arm64.zip']) or
+      (ansible_architecture in ['armv7l'] and item.name in ['findomain-armv7.zip','findomain-armv7l.zip'])
+    - findomain_asset_url is not defined
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "Fail if Findomain asset could not be determined"
+  ansible.builtin.fail:
+    msg: "Could not find a compatible Findomain Linux release asset for arch={{ ansible_architecture }}."
+  when:
+    - not findomain_bin.stat.exists
+    - findomain_asset_url is not defined
+
+- name: "Download Findomain release asset"
+  ansible.builtin.get_url:
+    url: "{{ findomain_asset_url }}"
+    dest: /tmp/findomain_release_asset
+    mode: '0644'
+    force: true
+  when:
+    - not findomain_bin.stat.exists
+    - findomain_asset_url is defined
+
+- name: "Ensure Findomain extract directory exists"
+  ansible.builtin.file:
+    path: /tmp/findomain_extract
+    state: directory
+    mode: '0755'
+  when:
+    - not findomain_bin.stat.exists
+    - findomain_asset_url is defined
+
+- name: "Extract Findomain zip"
+  become: true
+  become_method: sudo
+  ansible.builtin.unarchive:
+    src: /tmp/findomain_release_asset
+    dest: /tmp/findomain_extract
+    remote_src: true
+  when:
+    - not findomain_bin.stat.exists
+    - findomain_asset_url is defined
+    - findomain_asset_url is search('\\.zip$')
+
+- name: "Locate extracted Findomain binary"
+  ansible.builtin.find:
+    paths: /tmp/findomain_extract
+    patterns:
+      - "findomain"
+      - "findomain-*"
+    file_type: file
+    recurse: true
+  register: findomain_candidates
+  when:
+    - not findomain_bin.stat.exists
+    - findomain_asset_url is defined
+
+- name: "Fail if Findomain binary was not found after extraction"
+  ansible.builtin.fail:
+    msg: "Findomain asset was downloaded but no findomain binary was found after extraction."
+  when:
+    - not findomain_bin.stat.exists
+    - findomain_asset_url is defined
+    - (findomain_candidates.files | default([]) | length) == 0
+
+- name: "Install Findomain binary"
+  become: true
+  become_method: sudo
+  ansible.builtin.copy:
+    src: "{{ (findomain_candidates.files | sort(attribute='path') | first).path }}"
+    dest: /usr/local/bin/findomain
+    mode: '0755'
+    remote_src: true
+  when:
+    - not findomain_bin.stat.exists
+    - findomain_asset_url is defined
+    - (findomain_candidates.files | default([]) | length) > 0
 
 - name: "Install HTTP Probing tools"
   ansible.builtin.shell: "go install -v {{ item }}@latest"
@@ -66,7 +165,6 @@
     - github.com/projectdiscovery/katana/cmd/katana
     - github.com/jaeles-project/gospider
     - github.com/hakluke/hakrawler
-    - github.com/lc/cariddi
   when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install URL discovery tools"
@@ -77,7 +175,6 @@
   loop:
     - github.com/lc/gau/v2/cmd/gau
     - github.com/tomnomnom/waybackurls
-    - github.com/xnl-h4ck3r/waymore
   when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Scanning tools"
@@ -98,7 +195,6 @@
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/hahwul/dalfox/v2
-    - github.com/s0md3v/XSStrike
     - github.com/Emoe/kxss
     - github.com/ferreiraklet/airixss
   when: go_check.rc == 0 and go_gopath.stdout is defined
@@ -135,7 +231,6 @@
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/ffuf/ffuf/v2
-    - github.com/epi052/feroxbuster
   when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install JS Analysis tools"
@@ -145,8 +240,6 @@
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/lc/subjs
-    - github.com/GerbenJavado/LinkFinder
-    - github.com/m4ll0k/SecretFinder
     - github.com/ThreatUnkown/jsubfinder
   when: go_check.rc == 0 and go_gopath.stdout is defined
 
@@ -159,8 +252,6 @@
     - github.com/projectdiscovery/dnsx/cmd/dnsx
     - github.com/projectdiscovery/shuffledns/cmd/shuffledns
     - github.com/d3mondev/puredns/v2
-    - github.com/blechschmidt/massdns
-    - github.com/dnsgen/dnsgen
   when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Reverse DNS tools"
@@ -170,7 +261,6 @@
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/hakluke/hakrevdns
-    - github.com/robertdavidgraham/prips
   when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Screenshot tools"
@@ -180,7 +270,6 @@
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/sensepost/gowitness
-    - github.com/FortyNorthSecurity/EyeWitness
   when: go_check.rc == 0 and go_gopath.stdout is defined
 
 - name: "Install Git Recon tools"
@@ -189,7 +278,17 @@
     PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
-    - github.com/trufflesecurity/trufflehog/v3
-    - github.com/michenriksen/gitrob
     - github.com/gwen001/github-subdomains
   when: go_check.rc == 0 and go_gopath.stdout is defined
+
+- name: "Check if trufflehog is already installed"
+  ansible.builtin.command: which trufflehog
+  register: trufflehog_check
+  failed_when: false
+  changed_when: false
+
+- name: "Install trufflehog using installation script"
+  become: true
+  become_method: sudo
+  ansible.builtin.shell: "curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin"
+  when: trufflehog_check.rc != 0

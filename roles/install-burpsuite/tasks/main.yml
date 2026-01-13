@@ -1,0 +1,120 @@
+---
+- name: "Install Burp Suite CE dependencies"
+  become: true
+  become_method: sudo
+  ansible.builtin.package:
+    name:
+      - openjdk-17-jre
+      - curl
+    state: present
+
+- name: "Check if Burp Suite Community is already installed"
+  ansible.builtin.stat:
+    path: /opt/BurpSuiteCommunity/BurpSuiteCommunity
+  register: burpsuite_installed
+
+- name: "Check for locally provided Burp installer (optional)"
+  ansible.builtin.stat:
+    path: "{{ role_path }}/files/burpsuite_community_linux.sh"
+  register: burpsuite_local_installer
+
+- name: "Use locally provided Burp installer"
+  become: true
+  become_method: sudo
+  ansible.builtin.copy:
+    src: "{{ role_path }}/files/burpsuite_community_linux.sh"
+    dest: /tmp/burpsuite_community_linux.sh
+    mode: '0755'
+  when:
+    - not burpsuite_installed.stat.exists
+    - burpsuite_local_installer.stat.exists
+
+- name: "Download Burp Suite Community Linux installer (official)"
+  become: true
+  become_method: sudo
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fL --retry 3 --retry-delay 2 \
+      -A "Mozilla/5.0 (X11; Linux) BBForge" \
+      -o /tmp/burpsuite_community_linux.sh \
+      "https://portswigger.net/burp/releases/download?product=community&version=latest&type=Linux"
+    chmod 0755 /tmp/burpsuite_community_linux.sh
+  args:
+    executable: /bin/bash
+  when:
+    - not burpsuite_installed.stat.exists
+    - not burpsuite_local_installer.stat.exists
+
+- name: "Verify Burp installer looks like a shell script"
+  ansible.builtin.command: head -n 1 /tmp/burpsuite_community_linux.sh
+  register: burp_installer_shebang
+  changed_when: false
+  when: not burpsuite_installed.stat.exists
+
+- name: "Fail if Burp installer download is invalid"
+  ansible.builtin.fail:
+    msg: >-
+      Downloaded Burp installer does not look like a shell script (first line: {{ burp_installer_shebang.stdout | default('') }}).
+      This often means the download returned an HTML page (redirect/challenge).
+      Please manually download the Linux installer from PortSwigger and place it at:
+      roles/install-burpsuite/files/burpsuite_community_linux.sh
+  when:
+    - not burpsuite_installed.stat.exists
+    - burp_installer_shebang.stdout is not defined or (burp_installer_shebang.stdout is not match('^#!'))
+
+- name: "Install Burp Suite Community (silent)"
+  become: true
+  become_method: sudo
+  ansible.builtin.shell: |
+    set -euo pipefail
+    mkdir -p /opt/BurpSuiteCommunity
+    bash /tmp/burpsuite_community_linux.sh -q -dir /opt/BurpSuiteCommunity
+  args:
+    executable: /bin/bash
+    creates: /opt/BurpSuiteCommunity/BurpSuiteCommunity
+  when: not burpsuite_installed.stat.exists
+
+- name: "Verify Burp Suite binary exists"
+  ansible.builtin.stat:
+    path: /opt/BurpSuiteCommunity/BurpSuiteCommunity
+  register: burpsuite_installed_after
+
+- name: "Fail if Burp Suite did not install"
+  ansible.builtin.fail:
+    msg: "Burp Suite install completed but /opt/BurpSuiteCommunity/BurpSuiteCommunity was not created."
+  when: not burpsuite_installed_after.stat.exists
+
+- name: "Install burpsuite launcher on PATH"
+  become: true
+  become_method: sudo
+  ansible.builtin.copy:
+    dest: /usr/local/bin/burpsuite
+    mode: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      exec /opt/BurpSuiteCommunity/BurpSuiteCommunity "$@"
+
+- name: "Create desktop entry (system-wide)"
+  become: true
+  become_method: sudo
+  ansible.builtin.copy:
+    content: |
+      [Desktop Entry]
+      Name=Burp Suite Community Edition
+      Exec=burpsuite
+      Terminal=false
+      Type=Application
+      Categories=Development;Security;
+    dest: /usr/share/applications/burpsuite.desktop
+    mode: '0644'
+
+- name: "Clean up Burp installer"
+  become: true
+  become_method: sudo
+  ansible.builtin.file:
+    path: /tmp/burpsuite_community_linux.sh
+    state: absent
+  when: not burpsuite_local_installer.stat.exists
+
+
