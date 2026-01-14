@@ -10,8 +10,87 @@
     msg: "Go is not installed. Please ensure golang package is installed first."
   when: go_check.rc != 0
 
+- name: "Get current Go version"
+  ansible.builtin.shell: "go version | awk '{print $3}' | sed 's/go//'"
+  register: go_version_output
+  changed_when: false
+  when: go_check.rc == 0
+
+- name: "Check if Go version is too old (< 1.21)"
+  ansible.builtin.set_fact:
+    go_needs_upgrade: "{{ go_version_output.stdout is version('1.21', '<') }}"
+  when: go_check.rc == 0
+
+- name: "Download newer Go version (1.23.5)"
+  become: true
+  become_method: sudo
+  ansible.builtin.get_url:
+    url: "https://go.dev/dl/go1.23.5.linux-amd64.tar.gz"
+    dest: /tmp/go1.23.5.linux-amd64.tar.gz
+    mode: '0644'
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+
+- name: "Remove old Go installation"
+  become: true
+  become_method: sudo
+  ansible.builtin.file:
+    path: /usr/local/go
+    state: absent
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+
+- name: "Extract new Go version"
+  become: true
+  become_method: sudo
+  ansible.builtin.unarchive:
+    src: /tmp/go1.23.5.linux-amd64.tar.gz
+    dest: /usr/local
+    remote_src: true
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+
+- name: "Update PATH to use new Go"
+  ansible.builtin.set_fact:
+    go_binary_path: "/usr/local/go/bin/go"
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+
+- name: "Update PATH to use system Go"
+  ansible.builtin.set_fact:
+    go_binary_path: "go"
+  when:
+    - go_check.rc == 0
+    - not (go_needs_upgrade | default(false) | bool)
+
+- name: "Add new Go to PATH in .bashrc"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    line: 'export PATH="/usr/local/go/bin:$PATH"'
+    regexp: '^export PATH=.*\/usr\/local\/go\/bin'
+    create: true
+  become: false
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+
+- name: "Add new Go to PATH in .zshrc"
+  ansible.builtin.lineinfile:
+    path: "{{ ansible_env.HOME }}/.zshrc"
+    line: 'export PATH="/usr/local/go/bin:$PATH"'
+    regexp: '^export PATH=.*\/usr\/local\/go\/bin'
+    create: true
+  become: false
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+
 - name: "Get Go GOPATH"
-  ansible.builtin.command: go env GOPATH
+  ansible.builtin.command: "{{ go_binary_path | default('go') }} env GOPATH"
   register: go_gopath
   changed_when: false
   when: go_check.rc == 0
@@ -24,6 +103,7 @@
     create: true
   become: false
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Add Go bin to PATH in .zshrc"
   ansible.builtin.lineinfile:
@@ -33,11 +113,12 @@
     create: true
   become: false
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install Subdomain tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/subfinder/v2/cmd/subfinder
@@ -45,6 +126,8 @@
     - github.com/tomnomnom/assetfinder
     - github.com/projectdiscovery/chaos-client/cmd/chaos
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
+  register: subdomain_tools_install
 
 - name: "Check if findomain is already installed"
   ansible.builtin.stat:
@@ -147,62 +230,67 @@
     - (findomain_candidates.files | default([]) | length) > 0
 
 - name: "Install HTTP Probing tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/httpx/cmd/httpx
     - github.com/tomnomnom/httprobe
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install Crawling tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/katana/cmd/katana
     - github.com/jaeles-project/gospider
     - github.com/hakluke/hakrawler
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install URL discovery tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/lc/gau/v2/cmd/gau
     - github.com/tomnomnom/waybackurls
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install Scanning tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/nuclei/v3/cmd/nuclei
     - github.com/jaeles-project/jaeles
     - github.com/projectdiscovery/naabu/v2/cmd/naabu
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install XSS tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/hahwul/dalfox/v2
     - github.com/Emoe/kxss
     - github.com/ferreiraklet/airixss
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install Utility tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/tomnomnom/anew
@@ -210,6 +298,7 @@
     - github.com/tomnomnom/unfurl
     - github.com/tomnomnom/gf
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Check if pipx is installed"
   ansible.builtin.command: which pipx
@@ -225,61 +314,67 @@
   when: pipx_check.rc == 0
 
 - name: "Install Fuzzing tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/ffuf/ffuf/v2
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install JS Analysis tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/lc/subjs
     - github.com/ThreatUnkown/jsubfinder
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install DNS tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/projectdiscovery/dnsx/cmd/dnsx
     - github.com/projectdiscovery/shuffledns/cmd/shuffledns
     - github.com/d3mondev/puredns/v2
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install Reverse DNS tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/hakluke/hakrevdns
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install Screenshot tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/sensepost/gowitness
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Install Git Recon tools"
-  ansible.builtin.shell: "go install -v {{ item }}@latest"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
   environment:
-    PATH: "{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
     GOPATH: "{{ go_gopath.stdout }}"
   loop:
     - github.com/gwen001/github-subdomains
   when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
 
 - name: "Check if trufflehog is already installed"
   ansible.builtin.command: which trufflehog
