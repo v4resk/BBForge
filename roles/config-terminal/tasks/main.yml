@@ -25,9 +25,14 @@
   become: false
 
 - name: "Set zsh as default shell"
-  become: true
-  become_method: sudo
-  ansible.builtin.user:
-    name: "{{ ansible_user_id }}"
-    shell: /usr/bin/zsh
+  ansible.builtin.blockinfile:
+    path: "{{ ansible_env.HOME }}/.bashrc"
+    block: |
+      if [ -x /usr/bin/zsh ]; then
+          exec zsh
+      fi
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - Auto-launch zsh"
+    insertbefore: BOF
+    create: true
+  become: false
   when: zsh_check.rc == 0
