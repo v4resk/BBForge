@@ -7,17 +7,46 @@
     mode: '0755'
   become: false
 
-- name: "Get latest Obsidian release info"
+- name: "Check if Obsidian AppImage already exists"
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.local/share/obsidian/Obsidian.AppImage"
+  register: obsidian_appimage_exists
+
+- name: "Find local Obsidian AppImage in role files/"
+  ansible.builtin.find:
+    paths: "{{ role_path }}/files"
+    patterns: "Obsidian-*.AppImage"
+    file_type: file
+    recurse: false
+  register: obsidian_local_files
+  when: not obsidian_appimage_exists.stat.exists
+
+- name: "Copy Obsidian AppImage from files (if available)"
+  ansible.builtin.copy:
+    src: "{{ (obsidian_local_files.files | sort(attribute='path') | last).path }}"
+    dest: "{{ ansible_env.HOME }}/.local/share/obsidian/Obsidian.AppImage"
+    mode: '0755'
+  become: false
+  when:
+    - not obsidian_appimage_exists.stat.exists
+    - (obsidian_local_files.files | default([]) | length) > 0
+
+- name: "Get latest Obsidian release info (if no local copy)"
   ansible.builtin.uri:
     url: "https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest"
-    return_content: yes
+    return_content: true
   register: obsidian_release
+  when:
+    - not obsidian_appimage_exists.stat.exists
+    - (obsidian_local_files.files | default([]) | length) == 0
 
 - name: "Find Obsidian AppImage URL for current architecture"
   ansible.builtin.set_fact:
     obsidian_appimage_url: "{{ item.browser_download_url }}"
   loop: "{{ obsidian_release.json.assets | default([]) }}"
-  when: 
+  when:
+    - not obsidian_appimage_exists.stat.exists
+    - (obsidian_local_files.files | default([]) | length) == 0
     - obsidian_release.json.assets is defined
     - item.name is match('.*AppImage$')
     - (ansible_architecture == 'x86_64' and ('x86_64' in item.name or 'amd64' in item.name)) or
@@ -25,20 +54,16 @@
       (ansible_architecture == 'armv7l' and 'armv7' in item.name)
   loop_control:
     label: "{{ item.name }}"
-  failed_when: false
 
-- name: "Download Obsidian AppImage"
+- name: "Download Obsidian AppImage from GitHub (if no local copy)"
   ansible.builtin.get_url:
     url: "{{ obsidian_appimage_url }}"
     dest: "{{ ansible_env.HOME }}/.local/share/obsidian/Obsidian.AppImage"
     mode: '0755'
-  when: obsidian_appimage_url is defined
-  become: false
-
-- name: "Give execution permissions to obsidian"
-  ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/.local/share/obsidian/Obsidian.AppImage"
-    mode: 0755
+  when:
+    - not obsidian_appimage_exists.stat.exists
+    - (obsidian_local_files.files | default([]) | length) == 0
+    - obsidian_appimage_url is defined
   become: false
 
 - name: "Creating config folder"

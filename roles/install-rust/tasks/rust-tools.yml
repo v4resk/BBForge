@@ -1,18 +1,94 @@
 ---
-- name: "Update Rust toolchain"
-  ansible.builtin.shell: "{{ cargo_bin_path }}/rustup update stable"
-  environment:
-    PATH: "{{ cargo_bin_path }}:{{ ansible_env.PATH }}"
-    CARGO_HOME: "{{ ansible_env.HOME }}/.cargo"
-    RUSTUP_HOME: "{{ ansible_env.HOME }}/.rustup"
-  become: false
+- name: "Check if feroxbuster is already installed"
+  ansible.builtin.stat:
+    path: /usr/local/bin/feroxbuster
+  register: feroxbuster_bin
 
-- name: "Install Fuzzing tools"
-  ansible.builtin.shell: "{{ cargo_bin_path }}/cargo install {{ item }}"
-  environment:
-    PATH: "{{ cargo_bin_path }}:{{ ansible_env.PATH }}"
-    CARGO_HOME: "{{ ansible_env.HOME }}/.cargo"
-    RUSTUP_HOME: "{{ ansible_env.HOME }}/.rustup"
-  loop:
-    - feroxbuster
-  become: false
+- name: "Get latest feroxbuster release info"
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/epi052/feroxbuster/releases/latest"
+    return_content: true
+  register: feroxbuster_release
+  when: not feroxbuster_bin.stat.exists
+
+- name: "Select feroxbuster Linux asset for current architecture"
+  ansible.builtin.set_fact:
+    feroxbuster_asset_url: "{{ item.browser_download_url }}"
+  loop: "{{ feroxbuster_release.json.assets | default([]) }}"
+  when:
+    - not feroxbuster_bin.stat.exists
+    - item.browser_download_url is defined
+    - item.name is defined
+    - ansible_architecture in ['x86_64','amd64']
+    - "'x86_64-linux' in item.name"
+    - "'.tar.gz' in item.name"
+    - feroxbuster_asset_url is not defined
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: "Fail if feroxbuster asset could not be determined"
+  ansible.builtin.fail:
+    msg: "Could not find a compatible feroxbuster Linux release asset for arch={{ ansible_architecture }}."
+  when:
+    - not feroxbuster_bin.stat.exists
+    - feroxbuster_asset_url is not defined
+
+- name: "Download feroxbuster release asset"
+  ansible.builtin.get_url:
+    url: "{{ feroxbuster_asset_url }}"
+    dest: /tmp/feroxbuster_release_asset.tar.gz
+    mode: '0644'
+    force: true
+  when:
+    - not feroxbuster_bin.stat.exists
+    - feroxbuster_asset_url is defined
+
+- name: "Ensure feroxbuster extract directory exists"
+  ansible.builtin.file:
+    path: /tmp/feroxbuster_extract
+    state: directory
+    mode: '0755'
+  when:
+    - not feroxbuster_bin.stat.exists
+    - feroxbuster_asset_url is defined
+
+- name: "Extract feroxbuster tarball"
+  ansible.builtin.unarchive:
+    src: /tmp/feroxbuster_release_asset.tar.gz
+    dest: /tmp/feroxbuster_extract
+    remote_src: true
+  when:
+    - not feroxbuster_bin.stat.exists
+    - feroxbuster_asset_url is defined
+
+- name: "Locate extracted feroxbuster binary"
+  ansible.builtin.find:
+    paths: /tmp/feroxbuster_extract
+    patterns: "feroxbuster"
+    file_type: file
+    recurse: true
+  register: feroxbuster_candidates
+  when:
+    - not feroxbuster_bin.stat.exists
+    - feroxbuster_asset_url is defined
+
+- name: "Fail if feroxbuster binary was not found after extraction"
+  ansible.builtin.fail:
+    msg: "Feroxbuster asset was downloaded but no feroxbuster binary was found after extraction."
+  when:
+    - not feroxbuster_bin.stat.exists
+    - feroxbuster_asset_url is defined
+    - (feroxbuster_candidates.files | default([]) | length) == 0
+
+- name: "Install feroxbuster binary"
+  become: true
+  become_method: sudo
+  ansible.builtin.copy:
+    src: "{{ (feroxbuster_candidates.files | sort(attribute='path') | first).path }}"
+    dest: /usr/local/bin/feroxbuster
+    mode: '0755'
+    remote_src: true
+  when:
+    - not feroxbuster_bin.stat.exists
+    - feroxbuster_asset_url is defined
+    - (feroxbuster_candidates.files | default([]) | length) > 0

@@ -37,7 +37,7 @@
     curl -fL --retry 3 --retry-delay 2 \
       -A "Mozilla/5.0 (X11; Linux) BBForge" \
       -o /tmp/burpsuite_community_linux.sh \
-      "https://portswigger.net/burp/releases/download?product=community&version=latest&type=Linux"
+      "https://portswigger.net/burp/releases/download?product=community&version=2025.11.6&type=Linux"
     chmod 0755 /tmp/burpsuite_community_linux.sh
   args:
     executable: /bin/bash

@@ -1,49 +1,12 @@
 ---
-- name: "Check if Rust is installed"
-  ansible.builtin.command: which rustc
-  register: rust_check
-  failed_when: false
-  changed_when: false
-
-- name: "Check if rustup is installed"
-  ansible.builtin.command: which rustup
-  register: rustup_check
-  failed_when: false
-  changed_when: false
-
-- name: "Download rustup installer"
-  ansible.builtin.get_url:
-    url: https://sh.rustup.rs
-    dest: /tmp/rustup-init.sh
-    mode: '0755'
-  when: rustup_check.rc != 0
-
-- name: "Install Rust using rustup"
-  ansible.builtin.shell: /tmp/rustup-init.sh -y --default-toolchain stable
-  environment:
-    CARGO_HOME: "{{ ansible_env.HOME }}/.cargo"
-    RUSTUP_HOME: "{{ ansible_env.HOME }}/.rustup"
-  become: false
-  when: rustup_check.rc != 0
-
-- name: "Get Cargo bin path"
-  ansible.builtin.set_fact:
-    cargo_bin_path: "{{ ansible_env.HOME }}/.cargo/bin"
-
-- name: "Add Cargo bin to PATH in .bashrc"
-  ansible.builtin.lineinfile:
-    path: "{{ ansible_env.HOME }}/.bashrc"
-    line: 'export PATH="$PATH:{{ cargo_bin_path }}"'
-    regexp: '^export PATH=.*\.cargo/bin'
-    create: true
-  become: false
-
-- name: "Add Cargo bin to PATH in .zshrc"
-  ansible.builtin.lineinfile:
-    path: "{{ ansible_env.HOME }}/.zshrc"
-    line: 'export PATH="$PATH:{{ cargo_bin_path }}"'
-    regexp: '^export PATH=.*\.cargo/bin'
-    create: true
-  become: false
+- name: "Install Rust via apt"
+  ansible.builtin.apt:
+    update_cache: true
+    name:
+      - rustc
+      - cargo
+      - build-essential
+    state: present
+  become: true
 
 - import_tasks: rust-tools.yml

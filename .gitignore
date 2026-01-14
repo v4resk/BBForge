@@ -16,3 +16,6 @@ Thumbs.db
 *.swo
 *~
 
+# Large binaries (downloaded by playbook)
+roles/install-burpsuite/files/burpsuite_community_linux*.sh
+roles/config-obsidian/files/Obsidian-*.AppImage
