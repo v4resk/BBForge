@@ -272,6 +272,7 @@
     - github.com/projectdiscovery/nuclei/v3/cmd/nuclei
     - github.com/jaeles-project/jaeles
     - github.com/projectdiscovery/naabu/v2/cmd/naabu
+    - github.com/Chocapikk/wpprobe
   when: go_check.rc == 0 and go_gopath.stdout is defined
   failed_when: false
 
