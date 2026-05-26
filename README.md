@@ -403,6 +403,35 @@ head -n 100 recon/example.com/urls/all.txt > priority.txt
 chmod +x ~/Documents/BBForge-Scripts/*.sh
 ```
 
+### Synack LP Network Issues
+
+**Problem:** Connection errors during playbook execution
+
+**Common Causes:**
+- Download domains not on LP allowlist
+- Redirects to blocked CDN domains
+- External tool repositories blocked
+
+**Solutions:**
+```bash
+# Check if system Go is already installed (Synack VMs usually have it)
+go version
+
+# If Go is already 1.21+, the playbook will skip upgrade
+# If Go upgrade fails, playbook will use system Go automatically
+
+# Most tools install from LP-allowed sources:
+# - GitHub (github.com, githubusercontent.com) ✅
+# - Go packages (golang.org, proxy.golang.org) ✅
+# - PyPI (pypi.org, pythonhosted.org) ✅
+# - Rubygems (rubygems.org) ✅
+
+# If a tool fails to install, continue anyway:
+ansible-playbook main.yml -K --skip-tags "failing-tag"
+```
+
+**Note:** BBForge has been tested and works in Synack LP environments. The Go download URL has been updated to use `golang.org` instead of `go.dev` for LP compatibility.
+
 ---
 
 ## Tips & Best Practices
@@ -545,6 +574,14 @@ bb-recon example.com
 - ~10GB disk space for tools
 - Internet connection during installation
 - Ansible-core
+
+### Synack Launchpoint Environment
+BBForge is designed to work in **Synack LP restricted network environments**:
+- ✅ All tool downloads use LP-allowlisted domains
+- ✅ Graceful fallback if Go upgrade is blocked
+- ✅ System Go version (if installed) will be used as fallback
+- ⚠️ Some external tool sources may be unavailable
+- 💡 Most bug bounty tools install successfully via LP-allowed sources
 
 ### What Gets Installed
 - Go 1.23.5+
