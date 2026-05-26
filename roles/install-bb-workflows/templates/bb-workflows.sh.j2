@@ -1,0 +1,96 @@
+#!/bin/bash
+# =============================================================================
+# BBForge Bug Bounty Workflow Aliases
+# Automatically added by BBForge Ansible playbook
+# =============================================================================
+
+# Environment variables
+export HUNT_BASE="${HOME}/Targets"
+export BB_SCRIPTS_DIR="${HOME}/Documents/BBForge-Scripts"
+export PATH="${BB_SCRIPTS_DIR}:${PATH}"
+
+# Core workflow aliases
+alias hunt='${BB_SCRIPTS_DIR}/hunt.sh'
+alias bb-recon='${BB_SCRIPTS_DIR}/recon_engine.sh'
+alias bb-scan='${BB_SCRIPTS_DIR}/vuln_scanner.sh'
+alias bb-arsenal='${BB_SCRIPTS_DIR}/external_arsenal.sh'
+
+# Specialized scanner aliases
+alias bb-secrets='${BB_SCRIPTS_DIR}/secrets_hunter.sh'
+alias bb-cloud='${BB_SCRIPTS_DIR}/cloud_recon.sh'
+alias bb-403='${BB_SCRIPTS_DIR}/bypass_403.sh'
+alias bb-takeover='${BB_SCRIPTS_DIR}/takeover_scanner.sh'
+alias bb-params='${BB_SCRIPTS_DIR}/param_discovery.sh'
+alias bb-cves='${BB_SCRIPTS_DIR}/cve_scan.sh'
+alias bb-scope='${BB_SCRIPTS_DIR}/scope_aggregator.sh'
+
+# Helper function to show all BB commands
+bb-help() {
+    cat << 'EOF'
+╔═══════════════════════════════════════════════════════════════════╗
+║                    BBForge Workflow Commands                      ║
+╠═══════════════════════════════════════════════════════════════════╣
+║ Core Workflows:                                                   ║
+║   hunt <target>              - Create new engagement folder       ║
+║   bb-recon <domain>          - Run full recon pipeline            ║
+║   bb-scan <recon_dir>        - Run vulnerability scanner          ║
+║   bb-arsenal                 - Check installed tools              ║
+║                                                                   ║
+║ Specialized Scanners:                                             ║
+║   bb-secrets <target>        - Hunt leaked credentials            ║
+║   bb-cloud --keyword <name>  - Scan for cloud assets              ║
+║   bb-403 <url>               - Test 403 bypass techniques         ║
+║   bb-takeover <file>         - Scan subdomain takeover            ║
+║   bb-params <url>            - Discover hidden parameters         ║
+║   bb-cves <target>           - Scan for known CVEs                ║
+║   bb-scope <program>         - Aggregate program scope            ║
+║                                                                   ║
+║ Quick Start:                                                      ║
+║   1. hunt acme-corp                                               ║
+║   2. cd ~/Targets/acme-corp                                       ║
+║   3. bb-recon acme.com                                            ║
+║   4. bb-scan recon/acme.com/                                      ║
+║                                                                   ║
+║ Authentication (for logged-in testing):                           ║
+║   export BBHUNT_AUTH_HEADERS="Authorization: Bearer TOKEN"       ║
+║   export BBHUNT_SESSION_ID="session=abc123"                       ║
+║                                                                   ║
+║ Check tool installation status:                                   ║
+║   bb-arsenal                                                      ║
+╚═══════════════════════════════════════════════════════════════════╝
+EOF
+}
+
+# Quick navigation helpers
+cdtarget() {
+    if [ -z "$1" ]; then
+        cd "${HUNT_BASE}" || return 1
+    else
+        cd "${HUNT_BASE}/$1" || return 1
+    fi
+}
+
+# Tab completion for cdtarget
+if [ -n "$BASH_VERSION" ]; then
+    _cdtarget_complete() {
+        local cur="${COMP_WORDS[COMP_CWORD]}"
+        if [ -d "${HUNT_BASE}" ]; then
+            COMPREPLY=($(cd "${HUNT_BASE}" && compgen -d -- "$cur"))
+        fi
+    }
+    complete -F _cdtarget_complete cdtarget
+elif [ -n "$ZSH_VERSION" ]; then
+    _cdtarget_complete() {
+        local -a targets
+        if [ -d "${HUNT_BASE}" ]; then
+            targets=(${HUNT_BASE}/*(/:t))
+            _describe 'targets' targets
+        fi
+    }
+    compdef _cdtarget_complete cdtarget
+fi
+
+# BBForge banner (optional - shown on new shell)
+if [ "${BB_SHOW_BANNER:-0}" = "1" ]; then
+    echo "🔥 BBForge workflows loaded. Type 'bb-help' for available commands."
+fi

@@ -1,0 +1,73 @@
+---
+# Tasks for install-bb-workflows role
+
+- name: Create BBForge-Scripts directory
+  ansible.builtin.file:
+    path: "{{ bb_scripts_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create Targets directory
+  ansible.builtin.file:
+    path: "{{ bb_targets_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Copy workflow scripts to BBForge-Scripts
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "{{ bb_scripts_dir }}/{{ item }}"
+    mode: '0755'
+  loop: "{{ bb_workflow_scripts }}"
+
+- name: Deploy bb-workflows shell configuration
+  ansible.builtin.template:
+    src: bb-workflows.sh.j2
+    dest: "{{ ansible_env.HOME }}/.bb-workflows.sh"
+    mode: '0644'
+
+- name: Source bb-workflows in .bashrc
+  ansible.builtin.lineinfile:
+    path: "{{ bb_shell_config_bash }}"
+    line: '[ -f "$HOME/.bb-workflows.sh" ] && source "$HOME/.bb-workflows.sh"'
+    state: present
+    create: yes
+    mode: '0644'
+
+- name: Check if zsh is installed
+  ansible.builtin.command: which zsh
+  register: zsh_check
+  changed_when: false
+  failed_when: false
+
+- name: Source bb-workflows in .zshrc (if zsh exists)
+  ansible.builtin.lineinfile:
+    path: "{{ bb_shell_config_zsh }}"
+    line: '[ -f "$HOME/.bb-workflows.sh" ] && source "$HOME/.bb-workflows.sh"'
+    state: present
+    create: yes
+    mode: '0644'
+  when: zsh_check.rc == 0
+
+- name: Display workflow installation summary
+  ansible.builtin.debug:
+    msg:
+      - "✅ BBForge Workflows installed successfully!"
+      - ""
+      - "📁 Scripts location: {{ bb_scripts_dir }}"
+      - "📁 Targets location: {{ bb_targets_dir }}"
+      - ""
+      - "🔧 Available commands:"
+      - "  - hunt <target>         : Create new engagement"
+      - "  - bb-recon <domain>     : Run recon pipeline"
+      - "  - bb-scan <recon_dir>   : Run vulnerability scanner"
+      - "  - bb-secrets <target>   : Hunt secrets"
+      - "  - bb-cloud <options>    : Cloud recon"
+      - "  - bb-403 <url>          : Bypass 403"
+      - "  - bb-takeover <file>    : Subdomain takeover"
+      - "  - bb-params <url>       : Parameter discovery"
+      - "  - bb-cves <target>      : CVE scanning"
+      - "  - bb-arsenal            : Check installed tools"
+      - "  - bb-help               : Show full help"
+      - ""
+      - "⚠️  Restart your shell or run: source ~/.bashrc"

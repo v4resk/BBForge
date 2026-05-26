@@ -101,3 +101,43 @@
   when: pipx_check.rc == 0
   failed_when: false
   changed_when: true
+
+# ============================================================================
+# BBForge Workflow Dependencies - Missing Python Tools
+# ============================================================================
+
+- name: "Install subdomain takeover tools (dnsReaper)"
+  ansible.builtin.shell: "pipx install git+https://github.com/punk-security/dnsReaper.git"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true
+
+- name: "Install JWT analysis tools"
+  ansible.builtin.shell: "pipx install git+https://github.com/ticarpi/jwt_tool.git"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true
+
+- name: "Install CloudFlare bypass tools (CloudFail)"
+  ansible.builtin.shell: "pipx install git+https://github.com/m0rtem/CloudFail.git"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true
+
+- name: "Install gitleaks (secrets scanning)"
+  ansible.builtin.shell: "pipx install gitleaks"
+  environment:
+    PATH: "{{ ansible_env.HOME }}/.local/bin:{{ ansible_env.PATH }}"
+  become: false
+  when: pipx_check.rc == 0
+  failed_when: false
+  changed_when: true

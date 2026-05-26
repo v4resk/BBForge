@@ -388,3 +388,57 @@
   become_method: sudo
   ansible.builtin.shell: "curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin"
   when: trufflehog_check.rc != 0
+
+# ============================================================================
+# BBForge Workflow Dependencies - Missing Tools
+# ============================================================================
+
+- name: "Install interactsh-client (OOB callbacks for SSRF)"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
+  environment:
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
+  loop:
+    - github.com/projectdiscovery/interactsh/cmd/interactsh-client
+  when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
+
+- name: "Install 403 bypass tools"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
+  environment:
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
+  loop:
+    - github.com/lobuhi/byp4xx
+  when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
+
+- name: "Install subdomain takeover tools"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
+  environment:
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
+  loop:
+    - github.com/haccer/subjack
+  when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
+
+- name: "Install additional crawler (cariddi)"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
+  environment:
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
+  loop:
+    - github.com/edoardottt/cariddi/cmd/cariddi
+  when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false
+
+- name: "Install cloud tools"
+  ansible.builtin.shell: "{{ go_binary_path | default('go') }} install -v {{ item }}@latest"
+  environment:
+    PATH: "/usr/local/go/bin:{{ go_gopath.stdout }}/bin:{{ ansible_env.PATH }}"
+    GOPATH: "{{ go_gopath.stdout }}"
+  loop:
+    - github.com/sa7mon/s3scanner
+  when: go_check.rc == 0 and go_gopath.stdout is defined
+  failed_when: false

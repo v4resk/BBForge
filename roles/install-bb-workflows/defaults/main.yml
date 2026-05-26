@@ -1,0 +1,28 @@
+---
+# Default variables for install-bb-workflows role
+
+# Target directories
+bb_scripts_dir: "{{ ansible_env.HOME }}/Documents/BBForge-Scripts"
+bb_targets_dir: "{{ ansible_env.HOME }}/Targets"
+
+# Shell configuration
+bb_shell_config_bash: "{{ ansible_env.HOME }}/.bashrc"
+bb_shell_config_zsh: "{{ ansible_env.HOME }}/.zshrc"
+
+# Show banner on shell startup (0 = disabled, 1 = enabled)
+bb_show_banner: 0
+
+# Scripts to install
+bb_workflow_scripts:
+  - hunt.sh
+  - recon_engine.sh
+  - vuln_scanner.sh
+  - external_arsenal.sh
+  - _auth_helper.sh
+  - secrets_hunter.sh
+  - cloud_recon.sh
+  - bypass_403.sh
+  - takeover_scanner.sh
+  - param_discovery.sh
+  - cve_scan.sh
+  - scope_aggregator.sh
