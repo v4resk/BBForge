@@ -35,6 +35,26 @@
   register: go_download
   failed_when: false
 
+- name: "Check if Go download succeeded"
+  ansible.builtin.stat:
+    path: /tmp/go1.23.5.linux-amd64.tar.gz
+  register: go_download_file
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+
+- name: "Display Go download failure message (Synack LP)"
+  ansible.builtin.debug:
+    msg:
+      - "⚠️  Go upgrade download failed - likely Synack LP network restriction"
+      - "This is normal in Synack environment. Using system Go instead."
+      - "System Go version: {{ go_version_output.stdout | default('unknown') }}"
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+    - go_download_file is defined
+    - not go_download_file.stat.exists
+
 - name: "Remove old Go installation"
   become: true
   become_method: sudo
@@ -44,9 +64,8 @@
   when:
     - go_check.rc == 0
     - go_needs_upgrade | default(false) | bool
-    - go_download is defined
-    - go_download.failed is defined
-    - not go_download.failed
+    - go_download_file is defined
+    - go_download_file.stat.exists
 
 - name: "Extract new Go version"
   become: true
@@ -58,21 +77,8 @@
   when:
     - go_check.rc == 0
     - go_needs_upgrade | default(false) | bool
-    - go_download is defined
-    - go_download.failed is defined
-    - not go_download.failed
-
-- name: "Display Go download failure message (Synack LP)"
-  ansible.builtin.debug:
-    msg:
-      - "⚠️  Go upgrade download failed - likely Synack LP network restriction"
-      - "This is normal in Synack environment. Using system Go instead."
-      - "System Go version: {{ go_version_output.stdout | default('unknown') }}"
-  when:
-    - go_check.rc == 0
-    - go_needs_upgrade | default(false) | bool
-    - go_download is defined
-    - go_download.failed
+    - go_download_file is defined
+    - go_download_file.stat.exists
 
 - name: "Update PATH to use new Go"
   ansible.builtin.set_fact:
@@ -80,15 +86,24 @@
   when:
     - go_check.rc == 0
     - go_needs_upgrade | default(false) | bool
-    - go_download is defined
-    - not go_download.failed
+    - go_download_file is defined
+    - go_download_file.stat.exists
 
-- name: "Update PATH to use system Go (fallback)"
+- name: "Update PATH to use system Go (no upgrade needed)"
   ansible.builtin.set_fact:
     go_binary_path: "go"
   when:
     - go_check.rc == 0
-    - (not (go_needs_upgrade | default(false) | bool)) or (go_download is defined and go_download.failed)
+    - not (go_needs_upgrade | default(false) | bool)
+
+- name: "Update PATH to use system Go (download failed fallback)"
+  ansible.builtin.set_fact:
+    go_binary_path: "go"
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+    - go_download_file is defined
+    - not go_download_file.stat.exists
 
 - name: "Add new Go to PATH in .bashrc"
   ansible.builtin.lineinfile:
@@ -100,8 +115,8 @@
   when:
     - go_check.rc == 0
     - go_needs_upgrade | default(false) | bool
-    - go_download is defined
-    - not go_download.failed
+    - go_download_file is defined
+    - go_download_file.stat.exists
 
 - name: "Add new Go to PATH in .zshrc"
   ansible.builtin.lineinfile:
@@ -113,8 +128,8 @@
   when:
     - go_check.rc == 0
     - go_needs_upgrade | default(false) | bool
-    - go_download is defined
-    - not go_download.failed
+    - go_download_file is defined
+    - go_download_file.stat.exists
 
 - name: "Get Go GOPATH"
   ansible.builtin.command: "{{ go_binary_path | default('go') }} env GOPATH"
