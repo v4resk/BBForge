@@ -21,39 +21,60 @@
     go_needs_upgrade: "{{ go_version_output.stdout is version('1.21', '<') }}"
   when: go_check.rc == 0
 
-- name: "Download newer Go version (1.23.5)"
-  become: true
-  become_method: sudo
-  ansible.builtin.get_url:
-    url: "https://golang.org/dl/go1.23.5.linux-amd64.tar.gz"
-    dest: /tmp/go1.23.5.linux-amd64.tar.gz
-    mode: '0644'
-    timeout: 300
+- name: "Check if local Go tarball exists in BBForge"
+  ansible.builtin.stat:
+    path: "{{ playbook_dir }}/roles/install-tools/files/go1.23.5.linux-amd64.tar.gz"
+  register: go_local_file
   when:
     - go_check.rc == 0
     - go_needs_upgrade | default(false) | bool
-  register: go_download
-  failed_when: false
 
-- name: "Check if Go download succeeded"
+- name: "Copy local Go tarball if available"
+  become: true
+  become_method: sudo
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/roles/install-tools/files/go1.23.5.linux-amd64.tar.gz"
+    dest: /tmp/go1.23.5.linux-amd64.tar.gz
+    mode: '0644'
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+    - go_local_file.stat.exists
+  register: go_copied
+
+- name: "Display message using local Go tarball"
+  ansible.builtin.debug:
+    msg:
+      - "✅ Using local Go tarball from BBForge repo"
+      - "   Location: roles/install-tools/files/go1.23.5.linux-amd64.tar.gz"
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+    - go_local_file.stat.exists
+
+- name: "Skip Go upgrade (no local tarball in Synack LP)"
+  ansible.builtin.debug:
+    msg:
+      - "⚠️  Skipping Go upgrade - no local tarball provided"
+      - "   To upgrade Go in Synack LP:"
+      - "   1. Download go1.23.5.linux-amd64.tar.gz outside LP"
+      - "   2. Place in: roles/install-tools/files/go1.23.5.linux-amd64.tar.gz"
+      - "   3. Re-run playbook"
+      - ""
+      - "   Using system Go instead: {{ go_version_output.stdout | default('unknown') }}"
+      - "   (System Go is sufficient for all bug bounty tools)"
+  when:
+    - go_check.rc == 0
+    - go_needs_upgrade | default(false) | bool
+    - not go_local_file.stat.exists
+
+- name: "Check if Go is ready for installation"
   ansible.builtin.stat:
     path: /tmp/go1.23.5.linux-amd64.tar.gz
   register: go_download_file
   when:
     - go_check.rc == 0
     - go_needs_upgrade | default(false) | bool
-
-- name: "Display Go download failure message (Synack LP)"
-  ansible.builtin.debug:
-    msg:
-      - "⚠️  Go upgrade download failed - likely Synack LP network restriction"
-      - "This is normal in Synack environment. Using system Go instead."
-      - "System Go version: {{ go_version_output.stdout | default('unknown') }}"
-  when:
-    - go_check.rc == 0
-    - go_needs_upgrade | default(false) | bool
-    - go_download_file is defined
-    - not go_download_file.stat.exists
 
 - name: "Remove old Go installation"
   become: true
